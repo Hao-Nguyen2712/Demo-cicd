@@ -1,0 +1,34 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  # Thêm dòng này để cho phép kích hoạt CD bằng tay trên web nếu cần
+  workflow_dispatch: 
+
+jobs:
+  deploy-to-ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Publish App
+      # Lệnh này gom tất cả file chạy vào thư mục 'publish'
+      run: dotnet publish -c Release -o ./publish
+
+    - name: Copy files to Server via SCP
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "publish/*"
+        target: "/var/www/deploy-demo"
+        strip_components: 1 # Cực kỳ quan trọng: Lệnh này giúp bỏ qua thư mục cha "publish", chỉ copy ruột bên trong vào deploy-demo
